@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 
 export class LambdaSqsImageDemoStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -31,6 +32,12 @@ export class LambdaSqsImageDemoStack extends cdk.Stack {
         }
       }
     }));
+
+    // Add an S3 event notification to the imageBucket to send messages to the SQS queue when an object is created 
+    imageBucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED, // trigger on object creation 
+      new s3n.SqsDestination(imageQueue) // send the message to the SQS queue 
+    );
 
     // Output the bucket name
     new cdk.CfnOutput(this, 'ImageBucketName', {
