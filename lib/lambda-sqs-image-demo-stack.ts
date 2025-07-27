@@ -4,6 +4,10 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
+import * as lambdaNodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as sources from 'aws-cdk-lib/aws-lambda-event-sources';
+import * as path from 'path'; 
 
 export class LambdaSqsImageDemoStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -19,6 +23,24 @@ export class LambdaSqsImageDemoStack extends cdk.Stack {
     const imageQueue = new sqs.Queue(this, 'ImageProcesssingQueue', {
       queueName: 'ImageJobQueue', // specify a name for the queue to make it easier to identify in AWS Console 
     })
+
+    // Create a Lambda function to process images from the SQS queue
+    const imageProcessorFn = new lambdaNodejs.NodejsFunction(this, 'ImageProcessorFn', {
+      entry: path.join(__dirname, '../lambda/imageProcessor/index.ts'), // path to the Lambda function code
+      handler: 'handler', // the exported handler function in the code
+      runtime: lambda.Runtime.NODEJS_18_X, // specify the Node.js runtime
+      timeout: cdk.Duration.seconds(30),
+      bundling: {
+        nodeModules: ['sharp'],
+        forceDockerBundling: true,
+      },
+    });
+
+    // Connect the Lambda function to the SQS queue
+    imageProcessorFn.addEventSource(new sources.SqsEventSource(imageQueue));
+
+    // Grant the Lambda function permissions to read from and write to the S3 bucket
+    imageBucket.grantReadWrite(imageProcessorFn);
 
     // Grant the S3 bucket permission to send messages to the SQS queue 
     imageQueue.addToResourcePolicy(new iam.PolicyStatement({
