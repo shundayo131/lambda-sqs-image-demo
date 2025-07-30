@@ -31,8 +31,8 @@ export class LambdaSqsImageDemoStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X, // specify the Node.js runtime
       timeout: cdk.Duration.seconds(30),
       bundling: {
-        nodeModules: ['sharp'],
-        forceDockerBundling: true,
+        minify: true, 
+        sourceMap: false,
       },
     });
 
